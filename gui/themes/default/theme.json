@@ -1,0 +1,26 @@
+{
+  "id": "default",
+  "names": {"es": "Predeterminado", "en": "Default"},
+  "stylesheet": "style.qss",
+  "colors": {
+    "background": "#f4f6f8",
+    "surface": "#ffffff",
+    "surface_alt": "#e9eef3",
+    "processing_row": "#dce8f6",
+    "text": "#20252b",
+    "muted_text": "#5f6b76",
+    "accent": "#3169c6",
+    "accent_hover": "#2859aa",
+    "execution": "#218739",
+    "execution_hover": "#176b2b",
+    "danger": "#b3261e",
+    "danger_hover": "#922018",
+    "border": "#c9d1d9",
+    "selection_text": "#ffffff"
+  },
+  "metrics": {
+    "radius": 6,
+    "padding": 8,
+    "spacing": 8
+  }
+}

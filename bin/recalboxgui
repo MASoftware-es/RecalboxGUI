@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+PYTHON_BIN="$PROJECT_DIR/gui/.venv/bin/python"
+
+if [ ! -x "$PYTHON_BIN" ]; then
+    echo "No se encuentra el entorno virtual. Ejecuta primero: ./bin/setup --install" >&2
+    exit 1
+fi
+
+exec "$PYTHON_BIN" -m gui "$@"

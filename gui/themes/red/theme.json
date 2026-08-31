@@ -1,0 +1,27 @@
+{
+  "id": "red",
+  "names": {"es": "Rojo", "en": "Red"},
+  "inherits": "default",
+  "colors": {
+    "background": "#DFC3C6",
+    "surface": "#EBD5D7",
+    "surface_alt": "#CEAAAE",
+    "processing_row": "#D5ADB2",
+    "text": "#421D23",
+    "muted_text": "#6B4248",
+    "accent": "#93424C",
+    "accent_hover": "#77333C",
+    "execution": "#35654C",
+    "execution_hover": "#284E3A",
+    "danger": "#9D3340",
+    "danger_hover": "#7B2732",
+    "border": "#B47D84",
+    "selection_text": "#FFFFFF"
+  },
+  "metrics": {
+    "radius": 8,
+    "padding": 8,
+    "spacing": 8
+  },
+  "assets": {}
+}

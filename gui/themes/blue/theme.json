@@ -1,0 +1,27 @@
+{
+  "id": "blue",
+  "names": {"es": "Azul", "en": "Blue"},
+  "inherits": "default",
+  "colors": {
+    "background": "#C8DCEB",
+    "surface": "#D8E7F1",
+    "surface_alt": "#B5CFDF",
+    "processing_row": "#A9C8DB",
+    "text": "#102A42",
+    "muted_text": "#38566F",
+    "accent": "#2F648E",
+    "accent_hover": "#244F73",
+    "execution": "#276753",
+    "execution_hover": "#1C4E3F",
+    "danger": "#983C4A",
+    "danger_hover": "#762D38",
+    "border": "#7FA2BB",
+    "selection_text": "#FFFFFF"
+  },
+  "metrics": {
+    "radius": 8,
+    "padding": 8,
+    "spacing": 8
+  },
+  "assets": {}
+}

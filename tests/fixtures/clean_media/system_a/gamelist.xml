@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gameList>
+  <game>
+    <path>./game.zip</path>
+    <image>./media/images/Referenced &amp; Safe.png</image>
+    <thumbnail>media/images/Cross referenced.png</thumbnail>
+    <video>media/videos/Trailer.mp4</video>
+  </game>
+</gameList>

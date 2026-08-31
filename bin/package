@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd -P)"
+PROJECT_PARENT="$(dirname "$PROJECT_DIR")"
+PROJECT_NAME="$(basename "$PROJECT_DIR")"
+OUTPUT_DIR="$PROJECT_DIR/dist"
+OUTPUT_FILE="$OUTPUT_DIR/RecalboxGUI.zip"
+CACHE_ROOT="${XDG_CACHE_HOME:-$HOME/.cache}/RecalboxGUI/package"
+TEMP_ARCHIVE=""
+
+cleanup() {
+    [[ -z "$TEMP_ARCHIVE" ]] || rm -f -- "$TEMP_ARCHIVE"
+}
+trap cleanup EXIT
+
+command -v zip >/dev/null 2>&1 || {
+    printf 'Falta la dependencia "zip". Ejecuta primero: %s/setup --install\n' "$SCRIPT_DIR" >&2
+    exit 1
+}
+
+mkdir -p -- "$OUTPUT_DIR"
+mkdir -p -- "$CACHE_ROOT"
+TEMP_ARCHIVE="$(mktemp "$CACHE_ROOT/recalboxgui-package.XXXXXX.zip")"
+rm -f -- "$TEMP_ARCHIVE"
+
+printf '[RecalboxGUI package] Creando un paquete limpio...\n'
+(
+    cd "$PROJECT_PARENT"
+    zip -q -r -y "$TEMP_ARCHIVE" "$PROJECT_NAME" \
+        -x "$PROJECT_NAME/.git/*" \
+           "$PROJECT_NAME/.agents/*" \
+           "$PROJECT_NAME/.codex/*" \
+           "$PROJECT_NAME/.venv/*" \
+           "$PROJECT_NAME/gui/.venv/*" \
+           "$PROJECT_NAME/dist/*" \
+           "$PROJECT_NAME/tests/*" \
+           "$PROJECT_NAME/recalbox/*" \
+           "$PROJECT_NAME/antecedentes.md" \
+           "$PROJECT_NAME/.pytest_cache/*" \
+           "$PROJECT_NAME/.mypy_cache/*" \
+           "$PROJECT_NAME/.ruff_cache/*" \
+           "$PROJECT_NAME/.pyright/*" \
+           "$PROJECT_NAME/.pyre/*" \
+           "$PROJECT_NAME/.coverage" "$PROJECT_NAME/.coverage.*" \
+           "$PROJECT_NAME/.env" "$PROJECT_NAME/.env.*" \
+           "$PROJECT_NAME/.idea/*" "$PROJECT_NAME/.vscode/*" \
+           '*/__pycache__/*' '*.py[co]' '*.egg-info/*' \
+           '*.log' '*.tmp' '*.temp' '*.pid' 'core' 'core.*' \
+           '*~' '*.swp' '*.swo' '.DS_Store' 'Thumbs.db'
+)
+
+# La plantilla de variables, si existe, sí forma parte del paquete.
+if [[ -f "$PROJECT_DIR/.env.example" ]]; then
+    (
+        cd "$PROJECT_PARENT"
+        zip -q "$TEMP_ARCHIVE" "$PROJECT_NAME/.env.example"
+    )
+fi
+
+zip -T "$TEMP_ARCHIVE" >/dev/null
+mv -f -- "$TEMP_ARCHIVE" "$OUTPUT_FILE"
+TEMP_ARCHIVE=""
+
+printf '[RecalboxGUI package] Paquete creado correctamente.\n'
+printf '[RecalboxGUI package] Archivo: %s\n' "$OUTPUT_FILE"
+if command -v sha256sum >/dev/null 2>&1; then
+    printf '[RecalboxGUI package] SHA-256: %s\n' "$(sha256sum "$OUTPUT_FILE" | cut -d' ' -f1)"
+fi
+printf '[RecalboxGUI package] En el otro equipo: descomprime el ZIP y ejecuta bin/setup --install.\n'

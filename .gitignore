@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Pruebas, cobertura y analizadores
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.pyright/
+.pyre/
+coverage.xml
+junit.xml
+
+# Empaquetado
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Editores y sistema operativo
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Archivos temporales y registros
+*.log
+*.tmp
+*.temp
+*.pid
+core
+core.*
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+
+# Datos e informes generados al ejecutar los scripts de referencia
+/recalbox/customscripts/mame/mame-validator-data/
+
+# Metadatos locales de Codex
+/.agents/
+/.codex/

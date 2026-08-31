@@ -1,0 +1,27 @@
+{
+  "id": "ochre",
+  "names": {"es": "Ocre", "en": "Ochre"},
+  "inherits": "default",
+  "colors": {
+    "background": "#E0D2B3",
+    "surface": "#EADFC7",
+    "surface_alt": "#CDBA91",
+    "processing_row": "#D4C196",
+    "text": "#3B2E17",
+    "muted_text": "#645337",
+    "accent": "#89662A",
+    "accent_hover": "#6D4F1D",
+    "execution": "#50683A",
+    "execution_hover": "#3D502C",
+    "danger": "#93473B",
+    "danger_hover": "#74362D",
+    "border": "#B19865",
+    "selection_text": "#FFFFFF"
+  },
+  "metrics": {
+    "radius": 8,
+    "padding": 8,
+    "spacing": 8
+  },
+  "assets": {}
+}

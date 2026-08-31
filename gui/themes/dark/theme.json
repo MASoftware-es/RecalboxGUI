@@ -1,0 +1,21 @@
+{
+  "id": "dark",
+  "names": {"es": "Oscuro", "en": "Dark"},
+  "inherits": "default",
+  "colors": {
+    "background": "#171a1f",
+    "surface": "#252a31",
+    "surface_alt": "#303740",
+    "processing_row": "#344252",
+    "text": "#e6edf3",
+    "muted_text": "#9ba4ae",
+    "accent": "#1f6feb",
+    "accent_hover": "#388bfd",
+    "execution": "#238636",
+    "execution_hover": "#2ea043",
+    "danger": "#da3633",
+    "danger_hover": "#f85149",
+    "border": "#4d5661",
+    "selection_text": "#ffffff"
+  }
+}

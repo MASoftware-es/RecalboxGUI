@@ -1,0 +1,161 @@
+QMainWindow, QDialog, QWidget {
+    background-color: ${background};
+    color: ${text};
+}
+QMenuBar, QMenu, QStatusBar {
+    background-color: ${surface};
+    color: ${text};
+}
+QMenuBar::item {
+    background-color: transparent;
+    border-radius: ${radius}px;
+    padding: 6px 10px;
+}
+QMenuBar::item:selected,
+QMenuBar::item:pressed {
+    background-color: ${accent};
+    color: ${selection_text};
+}
+QMenu::item {
+    background-color: transparent;
+    color: ${text};
+    padding: 7px 28px 7px 12px;
+}
+QMenu::item:selected {
+    background-color: ${accent};
+    color: ${selection_text};
+}
+QMenu::item:disabled {
+    color: ${muted_text};
+}
+QMenu::separator {
+    background-color: ${border};
+    height: 1px;
+    margin: 5px 8px;
+}
+QGroupBox {
+    background-color: ${surface};
+    border: 1px solid ${border};
+    border-radius: ${radius}px;
+    margin-top: 12px;
+    padding: ${padding}px;
+    font-weight: 600;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 4px;
+}
+QListWidget, QTreeWidget, QPlainTextEdit, QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+    background-color: ${surface};
+    color: ${text};
+    border: 1px solid ${border};
+    border-radius: ${radius}px;
+    padding: 4px;
+}
+QListWidget:focus, QTreeWidget:focus, QPlainTextEdit:focus, QLineEdit:focus, QComboBox:focus,
+QSpinBox:focus, QDoubleSpinBox:focus {
+    border-color: ${accent};
+}
+QListWidget:disabled, QTreeWidget:disabled, QPlainTextEdit:disabled, QLineEdit:disabled,
+QComboBox:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {
+    background-color: ${surface_alt};
+    color: ${muted_text};
+}
+QComboBox QAbstractItemView {
+    background-color: ${surface};
+    color: ${text};
+    selection-background-color: ${accent};
+    selection-color: ${selection_text};
+}
+QListWidget::item:selected {
+    background-color: ${accent};
+    color: ${selection_text};
+}
+QTreeWidget::item:alternate {
+    background-color: ${surface_alt};
+    color: ${text};
+}
+QTreeWidget::item:selected,
+QTreeWidget::item:alternate:selected {
+    background-color: ${accent};
+    color: ${selection_text};
+}
+QHeaderView::section {
+    background-color: ${surface_alt};
+    color: ${text};
+    border: 0;
+    border-right: 1px solid ${border};
+    border-bottom: 1px solid ${border};
+    padding: 6px;
+    font-weight: 600;
+}
+QTreeWidget::indicator, QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+}
+QTreeWidget::indicator:unchecked, QCheckBox::indicator:unchecked {
+    background-color: ${surface};
+    border: 2px solid ${muted_text};
+    border-radius: 3px;
+}
+QTreeWidget::indicator:checked, QCheckBox::indicator:checked {
+    background-color: ${accent};
+    border: 2px solid ${accent_hover};
+    border-radius: 3px;
+}
+QTableWidget QComboBox[batchProcessing="true"] {
+    background-color: ${processing_row};
+}
+QTabWidget::pane {
+    background-color: ${surface};
+    border: 1px solid ${border};
+    border-radius: ${radius}px;
+}
+QTabBar::tab {
+    background-color: ${surface_alt};
+    color: ${muted_text};
+    border: 1px solid ${border};
+    padding: 7px 12px;
+}
+QTabBar::tab:selected {
+    background-color: ${surface};
+    color: ${text};
+    border-bottom-color: ${surface};
+}
+QProgressBar {
+    background-color: ${surface_alt};
+    color: ${text};
+    border: 1px solid ${border};
+    border-radius: ${radius}px;
+    text-align: center;
+}
+QProgressBar::chunk {
+    background-color: ${execution};
+    border-radius: ${radius}px;
+}
+QProgressBar[scope="total"]::chunk {
+    background-color: ${accent};
+}
+QPushButton {
+    background-color: ${accent};
+    color: ${selection_text};
+    border: 0;
+    border-radius: ${radius}px;
+    padding: ${padding}px 12px;
+}
+QPushButton:hover { background-color: ${accent_hover}; }
+QPushButton[execution="true"] { background-color: ${execution}; }
+QPushButton[execution="true"]:hover { background-color: ${execution_hover}; }
+QPushButton[success="true"] { background-color: ${execution}; }
+QPushButton[success="true"]:hover { background-color: ${execution_hover}; }
+QPushButton[danger="true"] { background-color: ${danger}; }
+QPushButton[danger="true"]:hover { background-color: ${danger_hover}; }
+QPushButton:disabled { background-color: ${surface_alt}; color: ${muted_text}; }
+QLabel[role="muted"] { color: ${muted_text}; }
+QLabel#pageTitle {
+    color: ${text};
+    font-size: 22px;
+    font-weight: 700;
+    padding: 4px 0 10px 0;
+}
