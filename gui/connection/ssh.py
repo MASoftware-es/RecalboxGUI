@@ -4,6 +4,8 @@ import socket
 import threading
 import shlex
 import stat
+import hashlib
+import posixpath
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
@@ -71,6 +73,11 @@ class RecalboxConnection:
         """Registra archivos de sesión que deben retirarse antes de cerrar SSH."""
         with self._lock:
             self._cleanup_paths.update(path for path in remote_paths if path)
+
+    def unregister_cleanup_paths(self, *remote_paths: str) -> None:
+        """Conserva archivos temporales que ya forman parte de datos guardados."""
+        with self._lock:
+            self._cleanup_paths.difference_update(path for path in remote_paths if path)
 
     def cleanup_registered_paths(self) -> None:
         with self._lock:
@@ -162,6 +169,168 @@ class RecalboxConnection:
             finally:
                 sftp.close()
 
+    def list_directory_entries(self, remote_path: str) -> list[tuple[str, bool]]:
+        """Lista los archivos y carpetas de una ruta para exploradores remotos."""
+        with self._lock:
+            if not self.active:
+                raise ConnectionError("La conexión SSH ya no está activa")
+            sftp = self._client.open_sftp()
+            try:
+                entries = [
+                    (item.filename, stat.S_ISDIR(item.st_mode))
+                    for item in sftp.listdir_attr(remote_path)
+                    if item.filename not in {".", ".."}
+                ]
+                return sorted(entries, key=lambda item: (not item[1], item[0].casefold()))
+            finally:
+                sftp.close()
+
+    def read_file(self, remote_path: str) -> "RemoteFileSnapshot":
+        """Lee un archivo remoto y conserva una huella para detectar cambios."""
+        with self._lock:
+            if not self.active:
+                raise ConnectionError("La conexión SSH ya no está activa")
+            sftp = self._client.open_sftp()
+            try:
+                attributes = sftp.stat(remote_path)
+                if not stat.S_ISREG(attributes.st_mode):
+                    raise OSError(f"La ruta remota no es un archivo: {remote_path}")
+                with sftp.open(remote_path, "rb") as stream:
+                    data = stream.read()
+                return RemoteFileSnapshot(
+                    remote_path, data, hashlib.sha256(data).hexdigest()
+                )
+            finally:
+                sftp.close()
+
+    def remote_file_is_regular(self, remote_path: str) -> bool:
+        with self._lock:
+            if not self.active:
+                raise ConnectionError("La conexión SSH ya no está activa")
+            sftp = self._client.open_sftp()
+            try:
+                try:
+                    return stat.S_ISREG(sftp.stat(remote_path).st_mode)
+                except OSError:
+                    return False
+            finally:
+                sftp.close()
+
+    def write_file_atomic(
+        self, remote_path: str, data: bytes, expected_sha256: str
+    ) -> "RemoteFileSnapshot":
+        """Sustituye un archivo solo si no cambió desde que fue leído."""
+        temporary_path = f"{remote_path}.recalboxgui-{uuid4().hex}.tmp"
+        with self._lock:
+            if not self.active:
+                raise ConnectionError("La conexión SSH ya no está activa")
+            sftp = self._client.open_sftp()
+            try:
+                attributes = sftp.stat(remote_path)
+                with sftp.open(remote_path, "rb") as stream:
+                    current = stream.read()
+                if hashlib.sha256(current).hexdigest() != expected_sha256:
+                    raise RemoteFileChangedError(remote_path)
+                try:
+                    with sftp.open(temporary_path, "wb") as stream:
+                        stream.write(data)
+                        stream.flush()
+                    sftp.chmod(temporary_path, stat.S_IMODE(attributes.st_mode))
+                    sftp.posix_rename(temporary_path, remote_path)
+                except Exception:
+                    try:
+                        sftp.remove(temporary_path)
+                    except OSError:
+                        pass
+                    raise
+                return RemoteFileSnapshot(
+                    remote_path, data, hashlib.sha256(data).hexdigest()
+                )
+            finally:
+                sftp.close()
+
+    def create_file_exclusive(self, remote_path: str, data: bytes) -> "RemoteFileSnapshot":
+        """Crea un archivo remoto sin sobrescribir uno que ya exista."""
+        with self._lock:
+            if not self.active:
+                raise ConnectionError("La conexión SSH ya no está activa")
+            sftp = self._client.open_sftp()
+            try:
+                with sftp.open(remote_path, "x") as stream:
+                    stream.write(data)
+                    stream.flush()
+                return RemoteFileSnapshot(
+                    remote_path, data, hashlib.sha256(data).hexdigest()
+                )
+            finally:
+                sftp.close()
+
+    def remove_file(self, remote_path: str, *, missing_ok: bool = False) -> None:
+        """Elimina un archivo remoto regular."""
+        with self._lock:
+            if not self.active:
+                raise ConnectionError("La conexión SSH ya no está activa")
+            sftp = self._client.open_sftp()
+            try:
+                try:
+                    attributes = sftp.stat(remote_path)
+                except OSError:
+                    if missing_ok:
+                        return
+                    raise
+                if not stat.S_ISREG(attributes.st_mode):
+                    raise OSError(f"La ruta remota no es un archivo: {remote_path}")
+                sftp.remove(remote_path)
+            finally:
+                sftp.close()
+
+    def upload_unique_file(self, local_path: Path, remote_directory: str) -> str:
+        """Sube un archivo sin sobrescribir otro y devuelve su ruta remota."""
+        with self._lock:
+            if not self.active:
+                raise ConnectionError("La conexión SSH ya no está activa")
+            sftp = self._client.open_sftp()
+            uploaded_path = ""
+            try:
+                self._ensure_remote_directory(sftp, remote_directory)
+                stem = local_path.stem or "image"
+                suffix = local_path.suffix.lower()
+                candidate = f"{stem}{suffix}"
+                counter = 2
+                while True:
+                    uploaded_path = posixpath.join(remote_directory, candidate)
+                    try:
+                        sftp.stat(uploaded_path)
+                    except OSError:
+                        break
+                    candidate = f"{stem}_{counter}{suffix}"
+                    counter += 1
+                sftp.put(str(local_path), uploaded_path)
+                return uploaded_path
+            except Exception:
+                if uploaded_path:
+                    try:
+                        sftp.remove(uploaded_path)
+                    except OSError:
+                        pass
+                raise
+            finally:
+                sftp.close()
+
+    @staticmethod
+    def _ensure_remote_directory(sftp: paramiko.SFTPClient, remote_path: str) -> None:
+        current = "/" if remote_path.startswith("/") else ""
+        for part in remote_path.split("/"):
+            if not part:
+                continue
+            current = posixpath.join(current, part)
+            try:
+                attributes = sftp.stat(current)
+                if not stat.S_ISDIR(attributes.st_mode):
+                    raise OSError(f"La ruta remota no es una carpeta: {current}")
+            except FileNotFoundError:
+                sftp.mkdir(current)
+
 
 @dataclass(frozen=True)
 class RemoteScriptResult:
@@ -173,6 +342,19 @@ class RemoteScriptResult:
     def combined_output(self) -> str:
         values = [value.strip() for value in (self.stdout, self.stderr) if value.strip()]
         return "\n".join(values)
+
+
+@dataclass(frozen=True)
+class RemoteFileSnapshot:
+    path: str
+    data: bytes
+    sha256: str
+
+
+class RemoteFileChangedError(RuntimeError):
+    def __init__(self, remote_path: str) -> None:
+        super().__init__(remote_path)
+        self.remote_path = remote_path
 
 
 def connection_error_key(error: Exception) -> tuple[str, str]:

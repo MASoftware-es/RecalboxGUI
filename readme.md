@@ -17,6 +17,7 @@ The application can store multiple Recalbox environments, connect to each one in
 - Detection and cleanup of orphaned images, thumbnails, and videos.
 - MAME ROM validation and correction.
 - Neo Geo ROM validation and correction.
+- Remote editing of `gamelist.xml` metadata and its images.
 - EmulationStation restart.
 - Safe restart or shutdown of the Recalbox system.
 
@@ -188,6 +189,22 @@ This utility provides three separate actions:
 - **Shut down Recalbox:** safely shuts down the system. The connection closes, and the system must be physically switched on before it can be used again.
 
 All three actions require confirmation.
+
+## GameList editor
+
+The **GameList** tab can inspect and edit game metadata directly in each system's `gamelist.xml` file.
+
+1. Select a folder from the **Systems** list.
+2. Select an entry from the **Games** list.
+3. Edit its path, name, aliases, genre, genre identifier, publisher, developer, description, image, or thumbnail.
+4. Click **Reload** to discard form changes and read the XML again.
+5. Click **Save** to validate and update the remote file.
+
+The path must be relative to the system folder and point to an existing ROM file. Text fields are validated to ensure that they can be written as XML. Attributes and metadata not shown in the form are preserved unchanged.
+
+The **Upload** buttons accept PNG, JPEG, WebP, BMP, and GIF images. The image is copied to `media/images` or `media/thumbnails`, previewed in the form, and its path is entered automatically. If a file with the same name already exists, a new name ending in `_2`, `_3`, and so on is generated without overwriting it.
+
+Saving uses a temporary file and an atomic replacement. If `gamelist.xml` changes after it was loaded—for example, because another process updates it—RecalboxGUI prevents it from being overwritten and asks for the data to be reloaded.
 
 ## Language and visual theme
 

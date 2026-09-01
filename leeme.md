@@ -17,6 +17,7 @@ La aplicación permite guardar distintos entornos Recalbox, conectarse a ellos d
 - Búsqueda y limpieza de imágenes, miniaturas y vídeos huérfanos.
 - Validación y corrección de ROM de MAME.
 - Validación y corrección de ROM de Neo Geo.
+- Edición remota de los metadatos `gamelist.xml` y sus imágenes.
 - Reinicio de EmulationStation.
 - Reinicio o apagado seguro del equipo Recalbox.
 
@@ -188,6 +189,22 @@ Esta utilidad contiene tres acciones independientes:
 - **Apagar Recalbox:** apaga el sistema de forma segura. La conexión se cerrará y será necesario encender físicamente el equipo para volver a utilizarlo.
 
 Todas estas acciones solicitan confirmación previa.
+
+## Editor GameList
+
+La pestaña **GameList** permite consultar y editar los metadatos de los juegos directamente en el `gamelist.xml` de cada sistema.
+
+1. Selecciona una carpeta en la lista **Sistemas**.
+2. Selecciona una entrada de la lista **Juegos**.
+3. Edita la ruta, nombre, alias, género, identificador de género, editor, desarrollador, descripción, imagen o miniatura.
+4. Pulsa **Recargar** para descartar los cambios del formulario y leer nuevamente el XML.
+5. Pulsa **Guardar** para validar y actualizar el archivo remoto.
+
+La ruta debe ser relativa a la carpeta del sistema y apuntar a un archivo de ROM existente. Los campos de texto se validan para garantizar que puedan escribirse en XML. Los atributos y metadatos que no aparecen en el formulario se conservan sin cambios.
+
+Los botones **Subir** aceptan imágenes PNG, JPEG, WebP, BMP y GIF. La imagen se copia a `media/images` o `media/thumbnails`, se previsualiza en el formulario y su ruta se introduce automáticamente. Si ya existe un archivo con el mismo nombre, se genera otro terminado en `_2`, `_3`, etc., sin sobrescribirlo.
+
+El guardado utiliza un archivo temporal y una sustitución atómica. Si `gamelist.xml` cambia después de haberlo cargado —por ejemplo, porque otro proceso lo actualiza— RecalboxGUI impide sobrescribirlo y solicita que se recarguen los datos.
 
 ## Idioma y tema visual
 

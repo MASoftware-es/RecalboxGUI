@@ -63,13 +63,16 @@ class MainWindow(QMainWindow):
 
     def _create_menus(self) -> None:
         self.application_menu = self.menuBar().addMenu("")
+        self.preferences_menu = QMenu(self)
         self.language_menu = QMenu(self)
         self.theme_menu = QMenu(self)
         self.connect_menu = QMenu(self)
-        self.application_menu.addMenu(self.language_menu)
-        self.application_menu.addMenu(self.theme_menu)
+        self.preferences_menu.addMenu(self.language_menu)
+        self.preferences_menu.addMenu(self.theme_menu)
         self.application_menu.addAction(self.environments_action)
         self.application_menu.addMenu(self.connect_menu)
+        self.application_menu.addSeparator()
+        self.application_menu.addMenu(self.preferences_menu)
         self.application_menu.addSeparator()
         self.application_menu.addAction(self.about_action)
         self.application_menu.addSeparator()
@@ -79,6 +82,7 @@ class MainWindow(QMainWindow):
         tr = self.translator
         self.setWindowTitle(tr("app.name"))
         self.application_menu.setTitle(tr("menu.application"))
+        self.preferences_menu.setTitle(tr("menu.preferences"))
         self.language_menu.setTitle(tr("menu.language"))
         self.theme_menu.setTitle(tr("menu.theme"))
         self.environments_action.setText(tr("menu.environments"))

@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
@@ -60,5 +61,26 @@ class RemoteDirectoryAttempt(QObject):
             self.succeeded.emit(self.connection.list_directories(self.remote_path))
         except Exception as error:
             self.failed.emit(str(error))
+        finally:
+            self.finished.emit()
+
+
+class RemoteCallAttempt(QObject):
+    """Ejecuta una operación remota arbitraria fuera del hilo de la interfaz."""
+
+    succeeded = Signal(object)
+    failed = Signal(object)
+    finished = Signal()
+
+    def __init__(self, operation: Callable[[], object]) -> None:
+        super().__init__()
+        self.operation = operation
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            self.succeeded.emit(self.operation())
+        except Exception as error:
+            self.failed.emit(error)
         finally:
             self.finished.emit()

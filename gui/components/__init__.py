@@ -3,6 +3,9 @@ from .environment_page import EnvironmentPage
 from .mame_validator_controls import MameValidatorControls, RomValidatorControls
 from .page_title import PageTitle
 from .service_restart_controls import ServiceRestartControls
+from .media_path_field import MediaPathField
+from .gamelist_page import GameListPage
+from .file_path_field import FilePathField
 
 __all__ = [
     "CleanMediaControls",
@@ -12,6 +15,9 @@ __all__ = [
     "MameValidatorControls",
     "RomValidatorControls",
     "ServiceRestartControls",
+    "MediaPathField",
+    "GameListPage",
+    "FilePathField",
     "PageTitle",
 ]
 from .clean_media_controls import CleanMediaControls
