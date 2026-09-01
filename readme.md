@@ -2,6 +2,8 @@
 
 RecalboxGUI is a graphical Linux application for managing one or more Recalbox systems from another computer. It connects through SSH to perform maintenance tasks and uses Samba to open ROM folders in the file manager.
 
+**Current version: 0.9.0**
+
 The application can store multiple Recalbox environments, connect to each one independently, and provide repair, cleanup, and validation tools without requiring direct terminal access.
 
 ## Available features
@@ -195,22 +197,37 @@ All three actions require confirmation.
 The **GameList** tab can inspect and edit game metadata directly in each system's `gamelist.xml` file.
 
 1. Select a folder from the **Systems** list.
-2. Select an entry from the **Games** list.
-3. Edit its path, name, aliases, genre, genre identifier, publisher, developer, description, image, or thumbnail.
+2. Select an entry from the **Games** list, initially sorted by name.
+3. Edit its file, name, aliases, genre, genre identifier, publisher, developer, description, image, or thumbnail.
 4. Click **Reload** to discard form changes and read the XML again.
 5. Click **Save** to validate and update the remote file.
 
-The path must be relative to the system folder and point to an existing ROM file. Text fields are validated to ensure that they can be written as XML. Attributes and metadata not shown in the form are preserved unchanged.
+The games list contains **Name** and **Cover** columns. The latter displays **Yes** or **No** to show whether each game has an associated image, making incomplete entries easy to find. Click either column heading to change the sorting.
 
-The **Upload** buttons accept PNG, JPEG, WebP, BMP, and GIF images. The image is copied to `media/images` or `media/thumbnails`, previewed in the form, and its path is entered automatically. If a file with the same name already exists, a new name ending in `_2`, `_3`, and so on is generated without overwriting it.
+If a system folder does not contain `gamelist.xml`, the application offers to create an empty one. The following actions are available below the games list:
+
+- **New:** prepares an empty form for adding an entry to the file.
+- **Delete...:** can remove only the XML entry or also delete the ROM and its associated resources. Destructive operations require additional confirmation and cannot be undone.
+
+The **File** field must contain a path relative to the system folder and point to an existing ROM. The **Select** button opens a remote file browser restricted to that folder so that the file can be chosen visually. Changing this field only updates the `gamelist.xml` reference; it does not rename or move the ROM.
+
+All fields accept plain text only. Formatting is discarded when content is pasted, and values are validated to ensure that they can be written safely as XML. Attributes and metadata not shown in the form are preserved unchanged.
+
+The **Image** and **Thumbnail** properties show a preview and provide three operations:
+
+- **Select...:** chooses an existing remote file by browsing from the system's `media` folder.
+- **Upload...:** accepts PNG, JPEG, WebP, BMP, and GIF images from the local computer. The file is copied to `media/images` or `media/thumbnails`; if its name already exists, another ending in `_2`, `_3`, and so on is generated without overwriting it.
+- **Delete:** after confirmation, physically deletes the remote image, clears its field, and immediately updates the corresponding `gamelist.xml` entry.
+
+Selecting or uploading an image refreshes its preview and path in the form. Click **Save** to persist the new reference in the XML.
 
 Saving uses a temporary file and an atomic replacement. If `gamelist.xml` changes after it was loaded—for example, because another process updates it—RecalboxGUI prevents it from being overwritten and asks for the data to be reloaded.
 
 ## Language and visual theme
 
-The language can be changed from **Application > Language**. The change takes effect immediately and is saved for the next run. Each language name is written in its own language.
+The language can be changed from **Preferences > Language**. The change takes effect immediately and is saved for the next run. Each language name is written in its own language.
 
-The theme is selected from **Application > Theme** and is also applied and saved immediately.
+The theme is selected from **Preferences > Theme** and is also applied and saved immediately.
 
 ## Location of user settings and files
 

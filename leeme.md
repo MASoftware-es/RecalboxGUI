@@ -2,6 +2,8 @@
 
 RecalboxGUI es una aplicación gráfica para Linux destinada a administrar uno o varios equipos Recalbox desde otro ordenador. Se conecta mediante SSH para ejecutar tareas de mantenimiento y utiliza Samba para abrir las carpetas de ROM en el explorador de archivos.
 
+**Versión actual: 0.9.0**
+
 La aplicación permite guardar distintos entornos Recalbox, conectarse a ellos de forma independiente y utilizar herramientas de reparación, limpieza y validación sin trabajar directamente desde una terminal.
 
 ## Funciones disponibles
@@ -195,22 +197,37 @@ Todas estas acciones solicitan confirmación previa.
 La pestaña **GameList** permite consultar y editar los metadatos de los juegos directamente en el `gamelist.xml` de cada sistema.
 
 1. Selecciona una carpeta en la lista **Sistemas**.
-2. Selecciona una entrada de la lista **Juegos**.
-3. Edita la ruta, nombre, alias, género, identificador de género, editor, desarrollador, descripción, imagen o miniatura.
+2. Selecciona una entrada de la lista **Juegos**, ordenada inicialmente por nombre.
+3. Edita el archivo, nombre, alias, género, identificador de género, editor, desarrollador, descripción, imagen o miniatura.
 4. Pulsa **Recargar** para descartar los cambios del formulario y leer nuevamente el XML.
 5. Pulsa **Guardar** para validar y actualizar el archivo remoto.
 
-La ruta debe ser relativa a la carpeta del sistema y apuntar a un archivo de ROM existente. Los campos de texto se validan para garantizar que puedan escribirse en XML. Los atributos y metadatos que no aparecen en el formulario se conservan sin cambios.
+La lista de juegos incluye las columnas **Nombre** y **Carátula**. Esta última indica con **Sí** o **No** si cada juego tiene una imagen asociada, facilitando la localización de fichas incompletas. Se puede cambiar la ordenación pulsando las cabeceras de ambas columnas.
 
-Los botones **Subir** aceptan imágenes PNG, JPEG, WebP, BMP y GIF. La imagen se copia a `media/images` o `media/thumbnails`, se previsualiza en el formulario y su ruta se introduce automáticamente. Si ya existe un archivo con el mismo nombre, se genera otro terminado en `_2`, `_3`, etc., sin sobrescribirlo.
+Si la carpeta de un sistema no contiene `gamelist.xml`, la aplicación ofrece crear uno vacío. Bajo la lista de juegos se encuentran estas acciones:
+
+- **Nuevo:** prepara una ficha vacía para añadir una entrada al archivo.
+- **Eliminar...:** permite eliminar solamente la entrada del XML o eliminar también la ROM y los recursos asociados. Las operaciones destructivas requieren confirmación adicional y no se pueden deshacer.
+
+El campo **Archivo** debe contener una ruta relativa a la carpeta del sistema y apuntar a una ROM existente. El botón **Seleccionar** abre un explorador remoto limitado a esa carpeta para elegir el archivo visualmente. Cambiar este campo solo modifica la referencia de `gamelist.xml`; no renombra ni mueve la ROM.
+
+Todos los campos admiten únicamente texto simple. Al pegar contenido se descarta cualquier formato enriquecido, y los valores se validan para garantizar que puedan escribirse correctamente en XML. Los atributos y metadatos que no aparecen en el formulario se conservan sin cambios.
+
+Las propiedades **Imagen** y **Miniatura** muestran una previsualización y ofrecen tres operaciones:
+
+- **Seleccionar...:** permite elegir un archivo ya existente navegando desde la carpeta `media` del sistema.
+- **Subir...:** acepta imágenes PNG, JPEG, WebP, BMP y GIF del ordenador local. El archivo se copia a `media/images` o `media/thumbnails`; si el nombre ya existe, se genera otro terminado en `_2`, `_3`, etc., sin sobrescribirlo.
+- **Eliminar:** tras solicitar confirmación, borra físicamente la imagen remota, limpia su campo y actualiza inmediatamente la entrada de `gamelist.xml`.
+
+Al seleccionar o subir una imagen, su previsualización y su ruta se actualizan en el formulario. Es necesario pulsar **Guardar** para conservar esa nueva referencia en el XML.
 
 El guardado utiliza un archivo temporal y una sustitución atómica. Si `gamelist.xml` cambia después de haberlo cargado —por ejemplo, porque otro proceso lo actualiza— RecalboxGUI impide sobrescribirlo y solicita que se recarguen los datos.
 
 ## Idioma y tema visual
 
-El idioma se cambia desde **Aplicación > Idioma**. El cambio se aplica inmediatamente y se conserva para la siguiente ejecución. El nombre de cada idioma aparece escrito en su propio idioma.
+El idioma se cambia desde **Preferencias > Idioma**. El cambio se aplica inmediatamente y se conserva para la siguiente ejecución. El nombre de cada idioma aparece escrito en su propio idioma.
 
-El tema se selecciona desde **Aplicación > Tema** y también se aplica y guarda inmediatamente.
+El tema se selecciona desde **Preferencias > Tema** y también se aplica y guarda inmediatamente.
 
 ## Ubicación de la configuración y archivos del usuario
 
