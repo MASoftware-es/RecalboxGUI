@@ -256,7 +256,7 @@ class RecalboxConnection:
                 raise ConnectionError("La conexión SSH ya no está activa")
             sftp = self._client.open_sftp()
             try:
-                with sftp.open(remote_path, "x") as stream:
+                with sftp.open(remote_path, "wx") as stream:
                     stream.write(data)
                     stream.flush()
                 return RemoteFileSnapshot(
@@ -281,6 +281,26 @@ class RecalboxConnection:
                 if not stat.S_ISREG(attributes.st_mode):
                     raise OSError(f"La ruta remota no es un archivo: {remote_path}")
                 sftp.remove(remote_path)
+            finally:
+                sftp.close()
+
+    def rename_file(self, source_path: str, target_path: str) -> None:
+        """Renombra un archivo remoto sin sobrescribir el destino."""
+        with self._lock:
+            if not self.active:
+                raise ConnectionError("La conexión SSH ya no está activa")
+            sftp = self._client.open_sftp()
+            try:
+                attributes = sftp.stat(source_path)
+                if not stat.S_ISREG(attributes.st_mode):
+                    raise OSError(f"La ruta remota no es un archivo: {source_path}")
+                try:
+                    sftp.stat(target_path)
+                except OSError:
+                    pass
+                else:
+                    raise FileExistsError(target_path)
+                sftp.rename(source_path, target_path)
             finally:
                 sftp.close()
 
