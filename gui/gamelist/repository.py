@@ -43,6 +43,7 @@ _ILLEGAL_XML = re.compile(
 class EditableGame:
     index: int
     values: dict[str, str]
+    hidden: bool = False
 
     @property
     def display_name(self) -> str:
@@ -55,6 +56,9 @@ class GameListData:
     system_path: str
     snapshot: RemoteFileSnapshot
     games: tuple[EditableGame, ...]
+    userdata_path: str
+    userdata_snapshot: RemoteFileSnapshot | None
+    userdata_lines: tuple[str, ...]
 
 
 class GameListValidationError(ValueError):
@@ -78,27 +82,20 @@ class GameListRepository:
         if not self.connection.remote_file_is_regular(gamelist_path):
             raise GameListValidationError("gamelist.no_gamelist")
         snapshot = self.connection.read_file(gamelist_path)
-        root = self._parse(snapshot.data)
-        games = tuple(
-            EditableGame(
-                index,
-                {field: (element.findtext(field) or "") for field in EDITABLE_FIELDS},
-            )
-            for index, element in enumerate(root.findall("game"))
-        )
-        return GameListData(system, system_path, snapshot, games)
+        return self.load_system_from_snapshot(system, system_path, snapshot)
 
     def create_empty(self, system: str) -> GameListData:
         system_path = self._system_path(system)
         gamelist_path = posixpath.join(system_path, "gamelist.xml")
         serialized = b"<?xml version='1.0' encoding='utf-8'?>\n<gameList />\n"
         snapshot = self.connection.create_file_exclusive(gamelist_path, serialized)
-        return GameListData(system, system_path, snapshot, ())
+        return self.load_system_from_snapshot(system, system_path, snapshot)
 
     def reload_game(
         self, data: GameListData, game: EditableGame
     ) -> tuple[GameListData, EditableGame]:
         snapshot = self.connection.read_file(data.snapshot.path)
+        userdata_snapshot, userdata_lines = self._read_userdata(data.userdata_path)
         root = self._parse(snapshot.data)
         elements = root.findall("game")
         if game.index >= len(elements):
@@ -109,10 +106,19 @@ class GameListRepository:
         refreshed = EditableGame(
             game.index,
             {field: (element.findtext(field) or "") for field in EDITABLE_FIELDS},
+            self._is_hidden(
+                element.findtext("path") or "", userdata_lines
+            ),
         )
         games = list(data.games)
         games[game.index] = refreshed
-        return replace(data, snapshot=snapshot, games=tuple(games)), refreshed
+        return replace(
+            data,
+            snapshot=snapshot,
+            games=tuple(games),
+            userdata_snapshot=userdata_snapshot,
+            userdata_lines=userdata_lines,
+        ), refreshed
 
     def read_media(self, data: GameListData, relative_path: str) -> bytes:
         if not relative_path.strip():
@@ -140,6 +146,7 @@ class GameListRepository:
         data: GameListData,
         game: EditableGame,
         values: dict[str, str],
+        hidden: bool = False,
     ) -> GameListData:
         cleaned = self._validate_values(data.system_path, values)
         root = self._parse(data.snapshot.data)
@@ -151,21 +158,36 @@ class GameListRepository:
             raise GameListValidationError("gamelist.game_changed")
         self._update_element(element, cleaned)
         serialized = self._serialize(root)
-        snapshot = self.connection.write_file_atomic(
-            data.snapshot.path, serialized, data.snapshot.sha256
+        userdata_lines = self._set_hidden(
+            data.userdata_lines,
+            game.values.get("path", ""),
+            cleaned["path"],
+            hidden,
         )
-        return self.load_system_from_snapshot(data.system, data.system_path, snapshot)
+        snapshot, userdata_snapshot = self._write_gamelist_and_userdata(
+            data, serialized, userdata_lines
+        )
+        return self.load_system_from_snapshot(
+            data.system, data.system_path, snapshot, userdata_snapshot, userdata_lines
+        )
 
-    def create_game(self, data: GameListData, values: dict[str, str]) -> GameListData:
+    def create_game(
+        self, data: GameListData, values: dict[str, str], hidden: bool = False
+    ) -> GameListData:
         cleaned = self._validate_values(data.system_path, values)
         root = self._parse(data.snapshot.data)
         element = ET.SubElement(root, "game")
         self._update_element(element, cleaned)
         serialized = self._serialize(root)
-        snapshot = self.connection.write_file_atomic(
-            data.snapshot.path, serialized, data.snapshot.sha256
+        userdata_lines = self._set_hidden(
+            data.userdata_lines, "", cleaned["path"], hidden
         )
-        return self.load_system_from_snapshot(data.system, data.system_path, snapshot)
+        snapshot, userdata_snapshot = self._write_gamelist_and_userdata(
+            data, serialized, userdata_lines
+        )
+        return self.load_system_from_snapshot(
+            data.system, data.system_path, snapshot, userdata_snapshot, userdata_lines
+        )
 
     def delete_game(
         self,
@@ -192,12 +214,17 @@ class GameListRepository:
             ]
         root.remove(element)
         serialized = self._serialize(root)
-        snapshot = self.connection.write_file_atomic(
-            data.snapshot.path, serialized, data.snapshot.sha256
+        userdata_lines = self._remove_userdata_entry(
+            data.userdata_lines, game.values.get("path", "")
+        )
+        snapshot, userdata_snapshot = self._write_gamelist_and_userdata(
+            data, serialized, userdata_lines
         )
         for remote_path in dict.fromkeys(associated_paths):
             self.connection.remove_file(remote_path, missing_ok=True)
-        return self.load_system_from_snapshot(data.system, data.system_path, snapshot)
+        return self.load_system_from_snapshot(
+            data.system, data.system_path, snapshot, userdata_snapshot, userdata_lines
+        )
 
     def delete_media(
         self, data: GameListData, game: EditableGame, kind: str
@@ -210,7 +237,7 @@ class GameListRepository:
         remote_path = self._safe_child_path(data.system_path, relative_path)
         values = dict(game.values)
         values[kind] = ""
-        updated = self.save_game(data, game, values)
+        updated = self.save_game(data, game, values, game.hidden)
         try:
             self.connection.remove_file(remote_path, missing_ok=True)
         except Exception:
@@ -228,17 +255,163 @@ class GameListRepository:
         return updated
 
     def load_system_from_snapshot(
-        self, system: str, system_path: str, snapshot: RemoteFileSnapshot
+        self,
+        system: str,
+        system_path: str,
+        snapshot: RemoteFileSnapshot,
+        userdata_snapshot: RemoteFileSnapshot | None = None,
+        userdata_lines: tuple[str, ...] | None = None,
     ) -> GameListData:
+        userdata_path = posixpath.join(system_path, "gamelist-userdata.ini")
+        if userdata_lines is None:
+            userdata_snapshot, userdata_lines = self._read_userdata(userdata_path)
         root = self._parse(snapshot.data)
         games = tuple(
             EditableGame(
                 index,
                 {field: (element.findtext(field) or "") for field in EDITABLE_FIELDS},
+                self._is_hidden(element.findtext("path") or "", userdata_lines),
             )
             for index, element in enumerate(root.findall("game"))
         )
-        return GameListData(system, system_path, snapshot, games)
+        return GameListData(
+            system,
+            system_path,
+            snapshot,
+            games,
+            userdata_path,
+            userdata_snapshot,
+            userdata_lines,
+        )
+
+    def _read_userdata(
+        self, userdata_path: str
+    ) -> tuple[RemoteFileSnapshot | None, tuple[str, ...]]:
+        if not self.connection.remote_file_is_regular(userdata_path):
+            return None, ()
+        snapshot = self.connection.read_file(userdata_path)
+        return snapshot, tuple(
+            snapshot.data.decode("utf-8", errors="replace").splitlines()
+        )
+
+    def _write_userdata(
+        self, data: GameListData, lines: tuple[str, ...]
+    ) -> RemoteFileSnapshot:
+        serialized = self._serialize_userdata(lines)
+        if data.userdata_snapshot is None:
+            return self.connection.create_file_exclusive(data.userdata_path, serialized)
+        if serialized == data.userdata_snapshot.data:
+            return data.userdata_snapshot
+        return self.connection.write_file_atomic(
+            data.userdata_path, serialized, data.userdata_snapshot.sha256
+        )
+
+    def _write_gamelist_and_userdata(
+        self,
+        data: GameListData,
+        gamelist: bytes,
+        userdata_lines: tuple[str, ...],
+    ) -> tuple[RemoteFileSnapshot, RemoteFileSnapshot]:
+        """Actualiza ambos archivos y revierte el INI si falla el XML."""
+        userdata_snapshot = self._write_userdata(data, userdata_lines)
+        try:
+            snapshot = self.connection.write_file_atomic(
+                data.snapshot.path, gamelist, data.snapshot.sha256
+            )
+        except Exception:
+            try:
+                if data.userdata_snapshot is None:
+                    self.connection.remove_file(data.userdata_path, missing_ok=True)
+                elif userdata_snapshot.sha256 != data.userdata_snapshot.sha256:
+                    self.connection.write_file_atomic(
+                        data.userdata_path,
+                        data.userdata_snapshot.data,
+                        userdata_snapshot.sha256,
+                    )
+            except Exception:
+                pass
+            raise
+        return snapshot, userdata_snapshot
+
+    @staticmethod
+    def _serialize_userdata(lines: tuple[str, ...]) -> bytes:
+        text = "\n".join(lines)
+        if text:
+            text += "\n"
+        return text.encode("utf-8")
+
+    @staticmethod
+    def _userdata_key(line: str) -> str:
+        if ":" not in line:
+            return ""
+        key = line.split(":", 1)[0]
+        return key.replace("\\.", ".").replace("\\_", "_").casefold()
+
+    @staticmethod
+    def _rom_key(path: str) -> str:
+        return PurePosixPath(path.strip().replace("\\", "/")).name.casefold()
+
+    @classmethod
+    def _is_hidden(cls, path: str, lines: tuple[str, ...]) -> bool:
+        key = cls._rom_key(path)
+        if not key:
+            return False
+        for line in lines:
+            if cls._userdata_key(line) != key:
+                continue
+            fields = line.split(":", 1)[1].split(",")
+            for field in fields:
+                name, separator, value = field.partition("=")
+                if (
+                    separator
+                    and name.strip().casefold() == "hidden"
+                    and value.strip().casefold() == "true"
+                ):
+                    return True
+        return False
+
+    @classmethod
+    def _set_hidden(
+        cls,
+        lines: tuple[str, ...],
+        old_path: str,
+        new_path: str,
+        hidden: bool,
+    ) -> tuple[str, ...]:
+        old_key = cls._rom_key(old_path)
+        new_key = cls._rom_key(new_path)
+        result: list[str] = []
+        target_found = False
+        for line in lines:
+            key = cls._userdata_key(line)
+            matches_old = bool(old_key) and key == old_key
+            matches_new = bool(new_key) and key == new_key
+            if not matches_old and not matches_new:
+                result.append(line)
+                continue
+            raw_key, raw_fields = line.split(":", 1)
+            fields = [field.strip() for field in raw_fields.split(",") if field.strip()]
+            fields = [
+                field
+                for field in fields
+                if field.partition("=")[0].strip().casefold() != "hidden"
+            ]
+            if matches_new and not target_found:
+                target_found = True
+                if hidden:
+                    fields.append("hidden=true")
+            if fields:
+                result.append(f"{raw_key}:{','.join(fields)}")
+        if hidden and not target_found:
+            result.append(f"{PurePosixPath(new_path.replace(chr(92), '/')).name}:hidden=true")
+        return tuple(result)
+
+    @classmethod
+    def _remove_userdata_entry(
+        cls, lines: tuple[str, ...], path: str
+    ) -> tuple[str, ...]:
+        key = cls._rom_key(path)
+        return tuple(line for line in lines if cls._userdata_key(line) != key)
 
     def _validate_values(self, system_path: str, values: dict[str, str]) -> dict[str, str]:
         cleaned = {field: str(values.get(field, "")).strip() for field in EDITABLE_FIELDS}

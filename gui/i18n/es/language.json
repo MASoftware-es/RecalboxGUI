@@ -75,6 +75,7 @@
     "gamelist.file_browser_select": "Seleccionar",
     "gamelist.name": "Nombre",
     "gamelist.cover": "Carátula",
+    "gamelist.hidden": "Oculto",
     "gamelist.aliases": "Alias",
     "gamelist.genre": "Género",
     "gamelist.genreid": "Identificador de género",

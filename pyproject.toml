@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "recalboxgui"
-version = "0.9.0"
+version = "0.10.0"
 description = "Aplicación Linux para administrar equipos Recalbox"
 requires-python = ">=3.10"
 dependencies = ["Paramiko>=3.5,<5", "PySide6>=6.7,<7"]

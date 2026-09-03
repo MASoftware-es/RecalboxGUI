@@ -2,7 +2,7 @@
 
 RecalboxGUI es una aplicación gráfica para Linux destinada a administrar uno o varios equipos Recalbox desde otro ordenador. Se conecta mediante SSH para ejecutar tareas de mantenimiento y utiliza Samba para abrir las carpetas de ROM en el explorador de archivos.
 
-**Versión actual: 0.9.0**
+**Versión actual: 0.10.0**
 
 La aplicación permite guardar distintos entornos Recalbox, conectarse a ellos de forma independiente y utilizar herramientas de reparación, limpieza y validación sin trabajar directamente desde una terminal.
 
@@ -202,7 +202,7 @@ La pestaña **GameList** permite consultar y editar los metadatos de los juegos 
 4. Pulsa **Recargar** para descartar los cambios del formulario y leer nuevamente el XML.
 5. Pulsa **Guardar** para validar y actualizar el archivo remoto.
 
-La lista de juegos incluye las columnas **Nombre** y **Carátula**. Esta última indica con **Sí** o **No** si cada juego tiene una imagen asociada, facilitando la localización de fichas incompletas. Se puede cambiar la ordenación pulsando las cabeceras de ambas columnas.
+La lista de juegos incluye las columnas **Nombre**, **Carátula** y **Oculto**. Las dos últimas indican con **Sí** o **No** si cada juego tiene una imagen asociada y si está oculto en Recalbox. Se puede cambiar la ordenación pulsando cualquiera de las cabeceras.
 
 Si la carpeta de un sistema no contiene `gamelist.xml`, la aplicación ofrece crear uno vacío. Bajo la lista de juegos se encuentran estas acciones:
 
@@ -210,6 +210,8 @@ Si la carpeta de un sistema no contiene `gamelist.xml`, la aplicación ofrece cr
 - **Eliminar...:** permite eliminar solamente la entrada del XML o eliminar también la ROM y los recursos asociados. Las operaciones destructivas requieren confirmación adicional y no se pueden deshacer.
 
 El campo **Archivo** debe contener una ruta relativa a la carpeta del sistema y apuntar a una ROM existente. El botón **Seleccionar** abre un explorador remoto limitado a esa carpeta para elegir el archivo visualmente. Cambiar este campo solo modifica la referencia de `gamelist.xml`; no renombra ni mueve la ROM.
+
+La casilla **Oculto** actualiza la propiedad `hidden=true` del juego en `gamelist-userdata.ini`. Las demás propiedades existentes en esa entrada se conservan. Si el archivo todavía no existe, se crea al guardar; al eliminar un juego también se retira su entrada de este archivo.
 
 Todos los campos admiten únicamente texto simple. Al pegar contenido se descarta cualquier formato enriquecido, y los valores se validan para garantizar que puedan escribirse correctamente en XML. Los atributos y metadatos que no aparecen en el formulario se conservan sin cambios.
 

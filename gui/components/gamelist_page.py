@@ -36,6 +36,7 @@ from ..i18n import Translator
 from ..utils import ask_confirmation, show_error, show_information
 from .file_path_field import FilePathField
 from .media_path_field import MediaPathField
+from .marked_checkbox import MarkedCheckBox
 
 
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif")
@@ -50,15 +51,15 @@ def _alphabetical_key(value: str) -> str:
 
 
 class GameListItem(QTreeWidgetItem):
-    """Fila ordenable por nombre normalizado o disponibilidad de carátula."""
+    """Fila ordenable por nombre, carátula o estado oculto."""
 
     def __lt__(self, other: QTreeWidgetItem) -> bool:
         column = self.treeWidget().sortColumn() if self.treeWidget() else 0
-        if column == 1:
-            own_cover = bool(self.data(1, Qt.ItemDataRole.UserRole))
-            other_cover = bool(other.data(1, Qt.ItemDataRole.UserRole))
-            if own_cover != other_cover:
-                return own_cover < other_cover
+        if column in {1, 2}:
+            own_value = bool(self.data(column, Qt.ItemDataRole.UserRole))
+            other_value = bool(other.data(column, Qt.ItemDataRole.UserRole))
+            if own_value != other_value:
+                return own_value < other_value
         return _alphabetical_key(self.text(0)) < _alphabetical_key(other.text(0))
 
 
@@ -89,7 +90,7 @@ class GameListPage(QWidget):
 
         self.games_group = QGroupBox()
         self.games_list = QTreeWidget()
-        self.games_list.setColumnCount(2)
+        self.games_list.setColumnCount(3)
         self.games_list.setRootIsDecorated(False)
         self.games_list.setAlternatingRowColors(True)
         self.games_list.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
@@ -99,6 +100,9 @@ class GameListPage(QWidget):
         self.games_list.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.games_list.header().setSectionResizeMode(
             1, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.games_list.header().setSectionResizeMode(
+            2, QHeaderView.ResizeMode.ResizeToContents
         )
         self.new_button = QPushButton()
         self.delete_button = QPushButton()
@@ -112,6 +116,7 @@ class GameListPage(QWidget):
 
         self.editor_group = QGroupBox()
         self.path_edit = FilePathField(translator)
+        self.hidden_check = MarkedCheckBox()
         self.name_edit = QLineEdit()
         self.aliases_edit = QLineEdit()
         self.genre_edit = QLineEdit()
@@ -191,6 +196,7 @@ class GameListPage(QWidget):
     def _build_form(self) -> None:
         tr = self.translator
         self.form.addRow(tr("gamelist.path"), self.path_edit)
+        self.form.addRow(tr("gamelist.hidden"), self.hidden_check)
         self.form.addRow(tr("gamelist.name"), self.name_edit)
         self.form.addRow(tr("gamelist.aliases"), self.aliases_edit)
         self.form.addRow(tr("gamelist.genre"), self.genre_edit)
@@ -204,6 +210,7 @@ class GameListPage(QWidget):
     def _retranslate_form(self) -> None:
         rows = (
             (self.path_edit, "gamelist.path"),
+            (self.hidden_check, "gamelist.hidden"),
             (self.name_edit, "gamelist.name"),
             (self.aliases_edit, "gamelist.aliases"),
             (self.genre_edit, "gamelist.genre"),
@@ -224,16 +231,23 @@ class GameListPage(QWidget):
         self.systems_group.setTitle(tr("gamelist.systems"))
         self.games_group.setTitle(tr("gamelist.games"))
         self.games_list.setHeaderLabels(
-            [tr("gamelist.name"), tr("gamelist.cover")]
+            [tr("gamelist.name"), tr("gamelist.cover"), tr("gamelist.hidden")]
         )
         self.games_list.headerItem().setTextAlignment(
             1, Qt.AlignmentFlag.AlignCenter
+        )
+        self.games_list.headerItem().setTextAlignment(
+            2, Qt.AlignmentFlag.AlignCenter
         )
         for row in range(self.games_list.topLevelItemCount()):
             item = self.games_list.topLevelItem(row)
             has_cover = bool(item.data(1, Qt.ItemDataRole.UserRole))
             item.setText(
                 1, tr("common.yes") if has_cover else tr("common.no")
+            )
+            hidden = bool(item.data(2, Qt.ItemDataRole.UserRole))
+            item.setText(
+                2, tr("common.yes") if hidden else tr("common.no")
             )
         self.editor_group.setTitle(tr("gamelist.properties"))
         self.reload_button.setText(tr("gamelist.reload"))
@@ -285,11 +299,16 @@ class GameListPage(QWidget):
                     self.translator("common.yes")
                     if has_cover
                     else self.translator("common.no"),
+                    self.translator("common.yes")
+                    if game.hidden
+                    else self.translator("common.no"),
                 ]
             )
             item.setData(0, Qt.ItemDataRole.UserRole, game.index)
             item.setData(1, Qt.ItemDataRole.UserRole, has_cover)
+            item.setData(2, Qt.ItemDataRole.UserRole, game.hidden)
             item.setTextAlignment(1, Qt.AlignmentFlag.AlignCenter)
+            item.setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
             self.games_list.addTopLevelItem(item)
         self.games_list.blockSignals(False)
         self.status.setText(
@@ -315,6 +334,7 @@ class GameListPage(QWidget):
     def _show_game(self, game: EditableGame) -> None:
         values = game.values
         self.path_edit.setText(values["path"])
+        self.hidden_check.setChecked(game.hidden)
         self.name_edit.setText(values["name"])
         self.aliases_edit.setText(values["aliases"])
         self.genre_edit.setText(values["genre"])
@@ -360,6 +380,15 @@ class GameListPage(QWidget):
         self._game = game
         self._new_game = False
         self._show_game(game)
+        current_item = self.games_list.currentItem()
+        if current_item is not None:
+            current_item.setData(2, Qt.ItemDataRole.UserRole, game.hidden)
+            current_item.setText(
+                2,
+                self.translator("common.yes")
+                if game.hidden
+                else self.translator("common.no"),
+            )
         self.status.setText(self.translator("gamelist.reloaded"))
         self._after_finish = lambda: self._load_game_media(data, game)
 
@@ -373,9 +402,13 @@ class GameListPage(QWidget):
         self.status.setText(self.translator("gamelist.saving"))
         self._start(
             lambda: (
-                self.repository.create_game(data, values)
+                self.repository.create_game(
+                    data, values, self.hidden_check.isChecked()
+                )
                 if is_new
-                else self.repository.save_game(data, game, values)
+                else self.repository.save_game(
+                    data, game, values, self.hidden_check.isChecked()
+                )
             ),
             lambda updated: self._save_completed(
                 updated, len(updated.games) - 1 if is_new else game.index, values
@@ -638,6 +671,7 @@ class GameListPage(QWidget):
         ):
             edit.clear()
         self.description_edit.clear()
+        self.hidden_check.setChecked(False)
         self.image_field.set_text("")
         self.thumbnail_field.set_text("")
         self.image_field.set_preview(b"")

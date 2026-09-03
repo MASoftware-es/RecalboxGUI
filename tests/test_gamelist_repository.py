@@ -32,6 +32,10 @@ class FakeConnection:
 
     def __init__(self) -> None:
         self.data = XML
+        self.userdata_data = (
+            b"game.zip:lastplayed=20260901T120000,playcount=3,hidden=true\n"
+            b"other.zip:core=mame2003_plus,emulator=libretro\n"
+        )
         self.existing = {"/roms/arcade/game.zip"}
         self.removed = []
         self.fail_remove = False
@@ -40,19 +44,35 @@ class FakeConnection:
         return ["arcade"]
 
     def remote_file_is_regular(self, path):
-        return path == "/roms/arcade/gamelist.xml" or path in self.existing
+        return (
+            path == "/roms/arcade/gamelist.xml"
+            or (path == "/roms/arcade/gamelist-userdata.ini" and self.userdata_data is not None)
+            or path in self.existing
+        )
 
     def read_file(self, path):
-        return RemoteFileSnapshot(path, self.data, hashlib.sha256(self.data).hexdigest())
+        data = self.userdata_data if path.endswith("gamelist-userdata.ini") else self.data
+        if data is None:
+            raise FileNotFoundError(path)
+        return RemoteFileSnapshot(path, data, hashlib.sha256(data).hexdigest())
 
     def write_file_atomic(self, path, data, expected_sha256):
-        if hashlib.sha256(self.data).hexdigest() != expected_sha256:
+        current = self.userdata_data if path.endswith("gamelist-userdata.ini") else self.data
+        if current is None or hashlib.sha256(current).hexdigest() != expected_sha256:
             raise AssertionError("unexpected concurrent change")
-        self.data = data
+        if path.endswith("gamelist-userdata.ini"):
+            self.userdata_data = data
+        else:
+            self.data = data
         return RemoteFileSnapshot(path, data, hashlib.sha256(data).hexdigest())
 
     def create_file_exclusive(self, path, data):
-        self.data = data
+        if path.endswith("gamelist-userdata.ini"):
+            if self.userdata_data is not None:
+                raise FileExistsError(path)
+            self.userdata_data = data
+        else:
+            self.data = data
         return RemoteFileSnapshot(path, data, hashlib.sha256(data).hexdigest())
 
     def remove_file(self, path, *, missing_ok=False):
@@ -87,6 +107,64 @@ class GameListRepositoryTests(unittest.TestCase):
         self.assertIn("<custom>must remain</custom>", text)
         self.assertIn("Rock &amp; Roll &lt;Test&gt;", text)
         self.assertEqual(updated.games[0].values["aliases"], "Alias A|Alias B")
+
+    def test_loads_hidden_state_from_userdata_by_rom_basename(self):
+        self.assertTrue(self.data.games[0].hidden)
+
+    def test_save_toggles_hidden_and_preserves_other_userdata_fields(self):
+        game = self.data.games[0]
+        updated = self.repository.save_game(
+            self.data, game, dict(game.values), False
+        )
+        text = self.connection.userdata_data.decode("utf-8")
+        self.assertIn("game.zip:lastplayed=20260901T120000,playcount=3", text)
+        self.assertNotIn("hidden=true", text)
+        self.assertFalse(updated.games[0].hidden)
+
+        updated = self.repository.save_game(
+            updated, updated.games[0], dict(updated.games[0].values), True
+        )
+        text = self.connection.userdata_data.decode("utf-8")
+        self.assertIn(
+            "game.zip:lastplayed=20260901T120000,playcount=3,hidden=true", text
+        )
+        self.assertTrue(updated.games[0].hidden)
+
+    def test_save_creates_missing_userdata_file(self):
+        self.connection.userdata_data = None
+        data = self.repository.load_system("arcade")
+
+        updated = self.repository.save_game(
+            data, data.games[0], dict(data.games[0].values), True
+        )
+
+        self.assertEqual(self.connection.userdata_data, b"game.zip:hidden=true\n")
+        self.assertTrue(updated.games[0].hidden)
+
+    def test_save_creates_empty_userdata_when_game_is_not_hidden(self):
+        self.connection.userdata_data = None
+        data = self.repository.load_system("arcade")
+
+        updated = self.repository.save_game(
+            data, data.games[0], dict(data.games[0].values), False
+        )
+
+        self.assertEqual(self.connection.userdata_data, b"")
+        self.assertFalse(updated.games[0].hidden)
+
+    def test_create_preserves_malformed_userdata_lines(self):
+        self.connection.userdata_data = b"# retained comment\n"
+        data = self.repository.load_system("arcade")
+        values = dict(data.games[0].values)
+        values.update({"path": "second.zip", "name": "Second"})
+        self.connection.existing.add("/roms/arcade/second.zip")
+
+        self.repository.create_game(data, values, True)
+
+        self.assertEqual(
+            self.connection.userdata_data,
+            b"# retained comment\nsecond.zip:hidden=true\n",
+        )
 
     def test_path_must_exist_inside_system_directory(self):
         game = self.data.games[0]
@@ -137,6 +215,7 @@ class GameListRepositoryTests(unittest.TestCase):
         deleted = self.repository.delete_game(created, created.games[0])
         self.assertEqual([game.display_name for game in deleted.games], ["Second"])
         self.assertEqual(self.connection.removed, [])
+        self.assertNotIn(b"game.zip:", self.connection.userdata_data)
 
     def test_delete_game_can_remove_rom_and_associated_resources(self):
         deleted = self.repository.delete_game(

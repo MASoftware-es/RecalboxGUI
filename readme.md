@@ -2,7 +2,7 @@
 
 RecalboxGUI is a graphical Linux application for managing one or more Recalbox systems from another computer. It connects through SSH to perform maintenance tasks and uses Samba to open ROM folders in the file manager.
 
-**Current version: 0.9.0**
+**Current version: 0.10.0**
 
 The application can store multiple Recalbox environments, connect to each one independently, and provide repair, cleanup, and validation tools without requiring direct terminal access.
 
@@ -202,7 +202,7 @@ The **GameList** tab can inspect and edit game metadata directly in each system'
 4. Click **Reload** to discard form changes and read the XML again.
 5. Click **Save** to validate and update the remote file.
 
-The games list contains **Name** and **Cover** columns. The latter displays **Yes** or **No** to show whether each game has an associated image, making incomplete entries easy to find. Click either column heading to change the sorting.
+The games list contains **Name**, **Cover**, and **Hidden** columns. The last two display **Yes** or **No** to show whether each game has an associated image and whether it is hidden in Recalbox. Click any column heading to change the sorting.
 
 If a system folder does not contain `gamelist.xml`, the application offers to create an empty one. The following actions are available below the games list:
 
@@ -210,6 +210,8 @@ If a system folder does not contain `gamelist.xml`, the application offers to cr
 - **Delete...:** can remove only the XML entry or also delete the ROM and its associated resources. Destructive operations require additional confirmation and cannot be undone.
 
 The **File** field must contain a path relative to the system folder and point to an existing ROM. The **Select** button opens a remote file browser restricted to that folder so that the file can be chosen visually. Changing this field only updates the `gamelist.xml` reference; it does not rename or move the ROM.
+
+The **Hidden** checkbox updates the game's `hidden=true` property in `gamelist-userdata.ini`. Any other properties in that entry are preserved. If the file does not exist yet, it is created when saving; deleting a game also removes its entry from this file.
 
 All fields accept plain text only. Formatting is discarded when content is pasted, and values are validated to ensure that they can be written safely as XML. Attributes and metadata not shown in the form are preserved unchanged.
 

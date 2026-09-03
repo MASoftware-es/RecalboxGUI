@@ -4,6 +4,7 @@ from .mame_validator_controls import MameValidatorControls, RomValidatorControls
 from .page_title import PageTitle
 from .service_restart_controls import ServiceRestartControls
 from .media_path_field import MediaPathField
+from .marked_checkbox import MarkedCheckBox
 from .gamelist_page import GameListPage
 from .file_path_field import FilePathField
 
@@ -17,6 +18,7 @@ __all__ = [
     "ServiceRestartControls",
     "MediaPathField",
     "GameListPage",
+    "MarkedCheckBox",
     "FilePathField",
     "PageTitle",
 ]

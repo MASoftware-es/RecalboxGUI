@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtWidgets import QCheckBox, QHeaderView, QHBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHeaderView, QHBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
+
+from .marked_checkbox import MarkedCheckBox
 
 from ..i18n import Translator
 
@@ -15,7 +17,7 @@ class DirectoryChecklist(QWidget):
         super().__init__(parent)
         self.translator = translator
         self._controls_enabled = True
-        self._checkboxes: list[QCheckBox] = []
+        self._checkboxes: list[MarkedCheckBox] = []
         self.list = QTreeWidget()
         self.list.setRootIsDecorated(False)
         self.list.setAlternatingRowColors(True)
@@ -42,7 +44,7 @@ class DirectoryChecklist(QWidget):
             item = QTreeWidgetItem(["", name])
             item.setSizeHint(0, QSize(0, 28))
             self.list.addTopLevelItem(item)
-            checkbox = QCheckBox()
+            checkbox = MarkedCheckBox()
             checkbox.toggled.connect(lambda _checked: self.selectionChanged.emit())
             container = QWidget()
             container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)

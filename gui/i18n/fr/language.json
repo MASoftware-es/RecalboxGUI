@@ -75,6 +75,7 @@
     "gamelist.file_browser_select": "Sélectionner",
     "gamelist.name": "Nom",
     "gamelist.cover": "Jaquette",
+    "gamelist.hidden": "Masqué",
     "gamelist.aliases": "Alias",
     "gamelist.genre": "Genre",
     "gamelist.genreid": "Identifiant du genre",

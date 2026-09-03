@@ -75,6 +75,7 @@
     "gamelist.file_browser_select": "Select",
     "gamelist.name": "Name",
     "gamelist.cover": "Cover",
+    "gamelist.hidden": "Hidden",
     "gamelist.aliases": "Aliases",
     "gamelist.genre": "Genre",
     "gamelist.genreid": "Genre identifier",
